@@ -20,16 +20,19 @@ func init() {
 		"ok_spotusd_order_info":   1}
 }
 
+//Response contains channel string and Data interface
 type Response struct {
 	Channel string
 	Data    interface{}
 }
 
+//Ticker contains Channel string and Data struct
 type Ticker struct {
 	Channel string
 	Data    TickerData
 }
 
+//TickerData contains Buy, High, Last, Low, Sell, Timestamp, and Vol
 type TickerData struct {
 	Buy       float64
 	High      float64
@@ -40,35 +43,41 @@ type TickerData struct {
 	Vol       float64
 }
 
+//PriceAmount contains Price and Amount float64
 type PriceAmount struct {
 	Price  float64
 	Amount float64
 }
 
+//Depth contains Channel string and Data struct
 type Depth struct {
 	Channel string
 	Data    DepthData
 }
 
+//DepthData contains Bids and Asks maps, and Timestamp uint64
 type DepthData struct {
 	Bids      []PriceAmount
 	Asks      []PriceAmount
 	Timestamp uint64
 }
 
+//Trades contains Channel string and Data map
 type Trades struct {
 	Channel string
 	Data    []Trade
 }
 
+//Trade contains ID, Price, Amount, Time, Bid
 type Trade struct {
-	Id     uint64
+	ID     uint64
 	Price  float64
 	Amount float64
 	Time   string
 	Bid    bool
 }
 
+//GetTicker is a *Response function which returns Ticker
 func (r *Response) GetTicker() (t *Ticker, err error) {
 	t = new(Ticker)
 	t.Channel = r.Channel
@@ -81,6 +90,7 @@ func (r *Response) GetTicker() (t *Ticker, err error) {
 	return t, err
 }
 
+//GetDepth is a *Response function which returns depth struct
 func (r *Response) GetDepth() (d *Depth, err error) {
 	d = new(Depth)
 	d.Channel = r.Channel
@@ -103,6 +113,7 @@ func (r *Response) GetDepth() (d *Depth, err error) {
 	return d, err
 }
 
+//GetTrades converts and returns Trades struct
 func (r *Response) GetTrades() (t *Trades, err error) {
 	t = new(Trades)
 	t.Channel = r.Channel
@@ -120,7 +131,7 @@ func (r *Response) GetTrades() (t *Trades, err error) {
 	t.Data = make([]Trade, len(data))
 	for n, rec := range data {
 		t.Data[n] = Trade{}
-		if t.Data[n].Id, err = strconv.ParseUint(rec[0], 10, 64); err != nil {
+		if t.Data[n].ID, err = strconv.ParseUint(rec[0], 10, 64); err != nil {
 			return t, err
 		}
 		if t.Data[n].Price, err = parseFloat64(rec[1]); err != nil {
@@ -135,6 +146,7 @@ func (r *Response) GetTrades() (t *Trades, err error) {
 	return t, err
 }
 
+//GetConverted checks channel, and runs GetTicker, GetDepth, or GetTrades
 func (r *Response) GetConverted() (interface{}, error) {
 
 	if r.Channel == "ok_btcusd_ticker" || r.Channel == "ok_ltcusd_ticker" {
