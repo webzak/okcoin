@@ -223,11 +223,13 @@ func convertMapToStruct(data map[string]interface{}, result interface{}) error {
 
 		switch fieldTypeName {
 		case "float64":
-			value, err := parseFloat64(data[name].(string))
-			if err != nil {
-				return err
+			if reflect.TypeOf(data[name]).String() == "string" {
+				value, err := parseFloat64(data[name].(string))
+				if err != nil {
+					return err
+				}
+				field.SetFloat(value)
 			}
-			field.SetFloat(value)
 		case "uint64":
 			value, err := strconv.ParseUint(data[name].(string), 10, 64)
 			if err != nil {
