@@ -48,12 +48,11 @@ func NewReq(channel string, on bool, params ...map[string]string) *Req {
 
 //NewWsAPI creates new *WsAPI providing keys pair
 func NewWsAPI(publicKey, privateKey string) (*WsAPI, error) {
-	if len(publicKey) == 0 || len(privateKey) == 0 {
-		return nil, errors.New("Keys are not valid")
-	}
 	ws := new(WsAPI)
-	ws.pubKey = publicKey
-	ws.prvKey = privateKey
+	if len(publicKey) != 0 || len(privateKey) != 0 {
+		ws.pubKey = publicKey
+		ws.prvKey = privateKey
+	}
 	return ws, nil
 }
 
