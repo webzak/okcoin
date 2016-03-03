@@ -74,7 +74,7 @@ func (w *WsAPI) Close() error {
 
 //Ping sends keep alive message and verifies server response
 //if error returned reconnect is required to continue operation
-func (w *WsAPI) Ping() error {
+func (w *WsAPI) Ping(check bool) error {
 	err := w.ws.WriteMessage(websocket.TextMessage, []byte(`{"event":"ping"}`))
 	if err != nil {
 		return err
@@ -84,7 +84,9 @@ func (w *WsAPI) Ping() error {
 		return err
 	}
 	if string(ret) != `{"event":"pong"}` {
-		err = errors.New("Ping error. Response: " + string(ret))
+		if check {
+			err = errors.New("Ping error. Response: " + string(ret))
+		}
 	}
 	return err
 }
