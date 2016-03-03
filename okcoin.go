@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -57,8 +58,9 @@ func NewWsAPI(publicKey, privateKey string) (*WsAPI, error) {
 }
 
 //Connect establishes websocket connection
-func (w *WsAPI) Connect(symbol string) (err error) {
-	dialer := websocket.Dialer{ReadBufferSize: 10000, WriteBufferSize: 1000}
+func (w *WsAPI) Connect(symbol string, timeout time.Duration) (err error) {
+	dialer := websocket.Dialer{ReadBufferSize: 10000, WriteBufferSize: 1000,
+		HandshakeTimeout: timeout * time.Second}
 	if symbol == "btc_cny" {
 		w.ws, _, err = dialer.Dial(CNYWsAPIURL, nil)
 	} else if symbol == "btc_usd" {
