@@ -179,7 +179,7 @@ func getResponses(input []byte) ([]Response, error) {
 	var rs []Response
 	err := json.Unmarshal(input, &rs)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 	return rs, nil
 }
