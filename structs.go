@@ -233,11 +233,13 @@ func convertMapToStruct(data map[string]interface{}, result interface{}) error {
 				field.SetFloat(data[name].(float64))
 			}
 		case "uint64":
-			value, err := strconv.ParseUint(data[name].(string), 10, 64)
-			if err != nil {
-				return err
+			if data[name] != nil {
+				value, err := strconv.ParseUint(data[name].(string), 10, 64)
+				if err != nil {
+					return err
+				}
+				field.SetUint(value)
 			}
-			field.SetUint(value)
 		}
 	}
 	return nil
