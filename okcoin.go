@@ -6,17 +6,21 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"sort"
 	"strings"
+	"time"
+
+	"github.com/gorilla/websocket"
 )
 
+//Addresses for USD and CNY OKCoin markets
 const (
-	WS_API_URL = "wss://real.okcoin.com:10440/websocket/okcoinapi"
+	USDWsAPIURL = "wss://real.okcoin.com:10440/websocket/okcoinapi"
+	CNYWsAPIURL = "wss://real.okcoin.cn:10440/websocket/okcoinapi"
 )
 
-//WsApi represents websocket api
-type WsApi struct {
+//WsAPI represents websocket api
+type WsAPI struct {
 	ws     *websocket.Conn
 	pubKey string
 	prvKey string
@@ -43,32 +47,36 @@ func NewReq(channel string, on bool, params ...map[string]string) *Req {
 	return &Req{channel, on, nil}
 }
 
-//NewWsApi creates new *WsApi providing keys pair
-func NewWsApi(publicKey, privateKey string) (*WsApi, error) {
-	if len(publicKey) == 0 || len(privateKey) == 0 {
-		return nil, errors.New("Keys are not valid")
+//NewWsAPI creates new *WsAPI providing keys pair
+func NewWsAPI(publicKey, privateKey string) (*WsAPI, error) {
+	ws := new(WsAPI)
+	if len(publicKey) != 0 || len(privateKey) != 0 {
+		ws.pubKey = publicKey
+		ws.prvKey = privateKey
 	}
-	ws := new(WsApi)
-	ws.pubKey = publicKey
-	ws.prvKey = privateKey
 	return ws, nil
 }
 
-//Connect establiches websocket connection
-func (w *WsApi) Connect() (err error) {
-	dialer := websocket.Dialer{ReadBufferSize: 10000, WriteBufferSize: 1000}
-	w.ws, _, err = dialer.Dial(WS_API_URL, nil)
+//Connect establishes websocket connection
+func (w *WsAPI) Connect(symbol string, timeout time.Duration) (err error) {
+	dialer := websocket.Dialer{ReadBufferSize: 10000, WriteBufferSize: 1000,
+		HandshakeTimeout: timeout * time.Second}
+	if symbol == "btc_cny" {
+		w.ws, _, err = dialer.Dial(CNYWsAPIURL, nil)
+	} else if symbol == "btc_usd" {
+		w.ws, _, err = dialer.Dial(USDWsAPIURL, nil)
+	}
 	return err
 }
 
 //Close closes websocket connection
-func (w *WsApi) Close() error {
+func (w *WsAPI) Close() error {
 	return w.ws.Close()
 }
 
 //Ping sends keep alive message and verifies server response
 //if error returned reconnect is required to continue operation
-func (w *WsApi) Ping() error {
+func (w *WsAPI) Ping(check bool) error {
 	err := w.ws.WriteMessage(websocket.TextMessage, []byte(`{"event":"ping"}`))
 	if err != nil {
 		return err
@@ -78,14 +86,16 @@ func (w *WsApi) Ping() error {
 		return err
 	}
 	if string(ret) != `{"event":"pong"}` {
-		err = errors.New("Ping error. Response: " + string(ret))
+		if check {
+			err = errors.New("Ping error. Response: " + string(ret))
+		}
 	}
 	return err
 }
 
 //Send sends request *Req to server
 //It is possible to send several requests simultaneously
-func (w *WsApi) Send(reqs ...*Req) error {
+func (w *WsAPI) Send(reqs ...*Req) error {
 	if reqs == nil {
 		return errors.New("Empty requests")
 	}
@@ -97,7 +107,7 @@ func (w *WsApi) Send(reqs ...*Req) error {
 }
 
 //Read returns raw response from api
-func (w *WsApi) Read() ([]byte, error) {
+func (w *WsAPI) Read() ([]byte, error) {
 	_, data, err := w.ws.ReadMessage()
 	if err != nil {
 		return nil, err
@@ -108,7 +118,7 @@ func (w *WsApi) Read() ([]byte, error) {
 //ReadResponses returns partically parsed api responses
 //The Response.Channel value can be used to detect the response contents
 //The method is useful for cases when some responses might be ignored
-func (w *WsApi) ReadResponses() ([]Response, error) {
+func (w *WsAPI) ReadResponses() ([]Response, error) {
 	data, err := w.Read()
 	if err != nil {
 		return nil, err
@@ -118,7 +128,7 @@ func (w *WsApi) ReadResponses() ([]Response, error) {
 
 //ReadConverted returns the response converted to appropriate structure
 //The possible return value type is one of: *Ticker, *Depth, *Trades
-func (w *WsApi) ReadConverted() ([]interface{}, error) {
+func (w *WsAPI) ReadConverted() ([]interface{}, error) {
 	rs, err := w.ReadResponses()
 	if err != nil {
 		return nil, err
@@ -135,7 +145,7 @@ func (w *WsApi) ReadConverted() ([]interface{}, error) {
 }
 
 //create message by combining request events
-func (w *WsApi) createMessage(reqs []*Req) (string, error) {
+func (w *WsAPI) createMessage(reqs []*Req) (string, error) {
 	chunks := make([]string, len(reqs))
 	for n, req := range reqs {
 		m, err := w.createEvent(req)
@@ -154,7 +164,7 @@ func (w *WsApi) createMessage(reqs []*Req) (string, error) {
 }
 
 //create single event from request
-func (w *WsApi) createEvent(r *Req) (string, error) {
+func (w *WsAPI) createEvent(r *Req) (string, error) {
 	var op, message string
 	if r.On {
 		op = "add"
@@ -168,17 +178,17 @@ func (w *WsApi) createEvent(r *Req) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		paramsJson, err := json.Marshal(params)
+		paramsJSON, err := json.Marshal(params)
 		if err != nil {
 			return "", err
 		}
-		message = fmt.Sprintf(`{"event":"%sChannel","channel":"%s", "parameters": %s}`, op, r.Channel, string(paramsJson))
+		message = fmt.Sprintf(`{"event":"%sChannel","channel":"%s", "parameters": %s}`, op, r.Channel, string(paramsJSON))
 	}
 	return message, nil
 }
 
 // adds api key and private key sign for parameters
-func (w *WsApi) prepareParams(params map[string]string) (map[string]string, error) {
+func (w *WsAPI) prepareParams(params map[string]string) (map[string]string, error) {
 	params["api_key"] = w.pubKey
 	ps := prepareParamString(params)
 	md5 := signParamString(ps, w.prvKey)

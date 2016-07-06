@@ -3,16 +3,17 @@ package okcoin
 import (
 	"errors"
 	//"fmt"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	ini "github.com/vaughan0/go-ini"
-	"testing"
 )
 
 func TestInit(t *testing.T) {
 
 	pub := "aaa"
 	prv := "bbb"
-	api, err := NewWsApi(pub, prv)
+	api, err := NewWsAPI(pub, prv)
 	assert := assert.New(t)
 	assert.Nil(err)
 
@@ -20,7 +21,7 @@ func TestInit(t *testing.T) {
 
 	assert.Equal(api.prvKey, prv)
 
-	api, err = NewWsApi(pub, "")
+	api, err = NewWsAPI(pub, "")
 	assert.NotNil(err)
 }
 
@@ -63,7 +64,7 @@ func TestChannel(t *testing.T) {
 */
 
 func Test_createEvent(t *testing.T) {
-	api, _ := NewWsApi("pub", "priv")
+	api, _ := NewWsAPI("pub", "priv")
 	req := &Req{"ok_btcusd_ticker", true, nil}
 	m, err := api.createEvent(req)
 	assert.Nil(t, err)
@@ -81,7 +82,7 @@ func Test_createEvent(t *testing.T) {
 }
 
 func Test_createMessage(t *testing.T) {
-	api, _ := NewWsApi("pub", "priv")
+	api, _ := NewWsAPI("pub", "priv")
 	req := NewReq("ok_btcusd_ticker", true)
 	m, err := api.createMessage([]*Req{req})
 	assert.Nil(t, err)
@@ -111,7 +112,7 @@ func Test_prepareParamString(t *testing.T) {
 func Test_prepareParams(t *testing.T) {
 	pubKey := "c821db84-6fbd-11e4-a9e3-c86000d26d7c"
 	prvKey := "123"
-	api, _ := NewWsApi(pubKey, prvKey)
+	api, _ := NewWsAPI(pubKey, prvKey)
 	p := make(map[string]string)
 	p["symbol"] = "btc_usd"
 	p["type"] = "buy"
